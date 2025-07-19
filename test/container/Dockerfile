@@ -53,15 +53,22 @@ ENV GOROOT=/usr/local/go
 ENV GOPATH=/go
 
 # Install build and test dependencies
-COPY hack/install.sh hack/tool-versions.sh go.* ./
-COPY hack/installers installers
 
-RUN ./install.sh helm && \
-    ./install.sh kustomize && \
-    ./install.sh codegen-tools && \
-    ./install.sh codegen-go-tools && \
-    ./install.sh lint-tools && \
-    ./install.sh gotestsum && \
+WORKDIR /
+
+COPY hack/install.sh hack/tool-versions.sh /hack/
+COPY hack/installers /hack/installers/
+
+COPY go.mod go.sum /
+
+RUN chmod +x /hack/install.sh && \
+    chmod +x /hack/installers/*.sh && \
+    /bin/bash /hack/install.sh helm && \
+    /bin/bash /hack/install.sh kustomize && \
+    /bin/bash /hack/install.sh codegen-tools && \
+    /bin/bash /hack/install.sh codegen-go-tools && \
+    /hack/install.sh lint-tools && \
+    /hack/install.sh gotestsum && \
     go install github.com/mattn/goreman@latest && \
     go install github.com/kisielk/godepgraph@latest && \
     go install github.com/jstemmer/go-junit-report@latest && \
