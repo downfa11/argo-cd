@@ -900,7 +900,7 @@ func (server *ArgoCDServer) useTLS() bool {
 }
 
 func requestTimeoutGRPCInterceptor(requestTimeout time.Duration) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	return func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		if requestTimeout == 0 {
 			return handler(ctx, req) // no timeout
 		}
@@ -935,7 +935,7 @@ func (server *ArgoCDServer) newGRPCServer(prometheusRegistry *prometheus.Registr
 		),
 		grpc.ChainUnaryInterceptor(
 			serverMetrics.UnaryServerInterceptor(),
-			requestTimeoutGRPCInterceptor(server.ArgoCDServerOpts.RequestTimeout),
+			requestTimeoutGRPCInterceptor(server.RequestTimeout),
 		),
 	}
 
@@ -1194,7 +1194,7 @@ func requestTimeoutHTTPInterceptor(next http.Handler, requestTimeout time.Durati
 func (server *ArgoCDServer) newHTTPServer(ctx context.Context, port int, grpcWebHandler http.Handler, appResourceTreeFn application.AppResourceTreeFn, conn *grpc.ClientConn, metricsReg HTTPMetricsRegistry) *http.Server {
 	endpoint := fmt.Sprintf("localhost:%d", port)
 	mux := http.NewServeMux()
-	reqTimeout := server.ArgoCDServerOpts.RequestTimeout
+	reqTimeout := server.RequestTimeout
 
 	httpS := http.Server{
 		Addr: endpoint,
