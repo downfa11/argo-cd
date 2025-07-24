@@ -562,7 +562,6 @@ func (server *ArgoCDServer) Run(ctx context.Context, listeners *Listeners) {
 			server.Shutdown()
 		}
 	}()
-
 	metricsServ := metrics.NewMetricsServer(server.MetricsHost, server.MetricsPort)
 	if server.RedisClient != nil {
 		cacheutil.CollectMetrics(server.RedisClient, metricsServ, server.userStateStorage.GetLockObject())
@@ -577,7 +576,7 @@ func (server *ArgoCDServer) Run(ctx context.Context, listeners *Listeners) {
 		server.sessionMgr.CollectMetrics(metricsServ)
 	}
 	server.serviceSet = svcSet
-	grpcS, appResourceTreeFn := server.newGRPCServer()
+	grpcS, appResourceTreeFn := server.newGRPCServer(metricsServ.PrometheusRegistry)
 	grpcWebS := grpcweb.WrapServer(grpcS)
 	var httpS *http.Server
 	var httpsS *http.Server
@@ -914,14 +913,13 @@ func requestTimeoutGRPCInterceptor(requestTimeout time.Duration) grpc.UnaryServe
 	}
 }
 
-func (server *ArgoCDServer) newGRPCServer() (*grpc.Server, application.AppResourceTreeFn) {
+func (server *ArgoCDServer) newGRPCServer(prometheusRegistry *prometheus.Registry) (*grpc.Server, application.AppResourceTreeFn) {
 	var serverMetricsOptions []grpc_prometheus.ServerMetricsOption
 	if enableGRPCTimeHistogram {
 		serverMetricsOptions = append(serverMetricsOptions, grpc_prometheus.WithServerHandlingTimeHistogram())
 	}
 	serverMetrics := grpc_prometheus.NewServerMetrics(serverMetricsOptions...)
-	reg := prometheus.NewRegistry()
-	reg.MustRegister(serverMetrics)
+	prometheusRegistry.MustRegister(serverMetrics)
 
 	sOpts := []grpc.ServerOption{
 		// Set the both send and receive the bytes limit to be 100MB
